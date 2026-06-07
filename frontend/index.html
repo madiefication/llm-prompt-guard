@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LLM Prompt Guard — Adversarial Prompt Detection Engine</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">⬡</span>
+        <div>
+          <span class="logo-title">LLM Prompt Guard</span>
+          <span class="logo-sub">Adversarial Prompt Detection Engine</span>
+        </div>
+      </div>
+      <div class="header-badges">
+        <span class="badge badge-live">● LIVE</span>
+        <a href="https://doi.org/10.36227/techrxiv.175416873.36395198/v1" target="_blank" class="badge badge-paper">Research Paper</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main layout -->
+  <main class="main">
+    <!-- Left panel: input + quick tests -->
+    <section class="panel panel-input">
+      <div class="section-label">PROMPT INPUT</div>
+      <textarea id="promptInput" class="prompt-textarea" placeholder="Enter a prompt to analyze for adversarial content...
+&#10;Example: Ignore all previous instructions and..." rows="7" spellcheck="false"></textarea>
+
+      <div class="input-actions">
+        <button id="analyzeBtn" class="btn btn-primary">
+          <span class="btn-icon">⬡</span> Analyze Prompt
+        </button>
+        <button id="clearBtn" class="btn btn-ghost">Clear</button>
+        <span id="charCount" class="char-count">0 / 10,000</span>
+      </div>
+
+      <!-- Quick test samples -->
+      <div class="section-label" style="margin-top:1.5rem">QUICK TEST SAMPLES</div>
+      <div class="sample-grid" id="sampleGrid">
+        <!-- Injected by app.js -->
+      </div>
+
+      <!-- Paper metrics -->
+      <div class="metrics-card">
+        <div class="metrics-title">Paper-Reported Metrics (Hybrid Engine)</div>
+        <div class="metrics-grid">
+          <div class="metric"><span class="metric-val">94.8%</span><span class="metric-lbl">Accuracy</span></div>
+          <div class="metric"><span class="metric-val">96.5%</span><span class="metric-lbl">Precision</span></div>
+          <div class="metric"><span class="metric-val">92.4%</span><span class="metric-lbl">Recall</span></div>
+          <div class="metric"><span class="metric-val">94.4%</span><span class="metric-lbl">F1 Score</span></div>
+          <div class="metric"><span class="metric-val">~31ms</span><span class="metric-lbl">Latency</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right panel: results -->
+    <section class="panel panel-result">
+      <div class="section-label">ANALYSIS RESULT</div>
+
+      <!-- Idle state -->
+      <div id="idleState" class="idle-state">
+        <div class="idle-icon">⬡</div>
+        <div class="idle-text">Awaiting prompt analysis</div>
+        <div class="idle-sub">Submit a prompt to run the detection engine</div>
+      </div>
+
+      <!-- Loading state -->
+      <div id="loadingState" class="loading-state hidden">
+        <div class="scanner-bar"></div>
+        <div class="loading-text">Scanning prompt...</div>
+      </div>
+
+      <!-- Result card -->
+      <div id="resultCard" class="result-card hidden">
+
+        <!-- Verdict header -->
+        <div class="verdict-header" id="verdictHeader">
+          <div class="verdict-left">
+            <div class="verdict-badge" id="verdictBadge">BENIGN</div>
+            <div class="verdict-score">
+              Threat Score: <span id="scoreValue">0.000</span>
+            </div>
+          </div>
+          <div class="threat-meter-wrap">
+            <div class="threat-meter-label">THREAT LEVEL</div>
+            <div class="threat-meter">
+              <div class="threat-meter-track">
+                <div class="threat-meter-fill" id="threatFill"></div>
+              </div>
+              <div class="threat-ticks">
+                <span>LOW</span><span>MED</span><span>HIGH</span>
+              </div>
+            </div>
+            <div class="risk-badge" id="riskBadge">LOW</div>
+          </div>
+        </div>
+
+        <!-- Score breakdown -->
+        <div class="result-section">
+          <div class="result-section-title">Score Breakdown</div>
+          <div class="score-bars">
+            <div class="score-bar-row">
+              <span class="score-bar-label">Rule Engine</span>
+              <div class="score-bar-track">
+                <div class="score-bar-fill rule-fill" id="ruleBar"></div>
+              </div>
+              <span class="score-bar-val" id="ruleVal">0.000</span>
+            </div>
+            <div class="score-bar-row">
+              <span class="score-bar-label">ML Model</span>
+              <div class="score-bar-track">
+                <div class="score-bar-fill ml-fill" id="mlBar"></div>
+              </div>
+              <span class="score-bar-val" id="mlVal">0.000</span>
+            </div>
+            <div class="score-bar-row">
+              <span class="score-bar-label">Hybrid</span>
+              <div class="score-bar-track">
+                <div class="score-bar-fill hybrid-fill" id="hybridBar"></div>
+              </div>
+              <span class="score-bar-val" id="hybridVal">0.000</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action taken -->
+        <div class="result-section">
+          <div class="result-section-title">Action Taken</div>
+          <div class="action-chip" id="actionChip">ALLOW</div>
+          <div class="action-detail" id="actionDetail"></div>
+        </div>
+
+        <!-- Triggered rules -->
+        <div class="result-section" id="rulesSection">
+          <div class="result-section-title">Triggered Security Rules <span id="ruleCount" class="count-badge">0</span></div>
+          <div id="rulesList" class="rules-list"></div>
+        </div>
+
+        <!-- ML token analysis -->
+        <div class="result-section" id="tokensSection">
+          <div class="result-section-title">Top Contributing Tokens</div>
+          <div id="tokensList" class="tokens-list"></div>
+        </div>
+
+        <!-- Rewritten prompt -->
+        <div class="result-section hidden" id="rewrittenSection">
+          <div class="result-section-title">Rewritten Prompt</div>
+          <div class="rewritten-box" id="rewrittenBox"></div>
+        </div>
+
+        <!-- Explanation -->
+        <div class="result-section">
+          <div class="result-section-title">Explainability Summary</div>
+          <div class="explanation-text" id="explanationText"></div>
+        </div>
+
+        <!-- Latency -->
+        <div class="latency-row">
+          <span class="latency-label">Analysis latency:</span>
+          <span class="latency-val" id="latencyVal">—</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div>
+      Research: <a href="https://doi.org/10.36227/techrxiv.175416873.36395198/v1" target="_blank">
+        LLM Adversarial Prompt Attack Detection and Mitigation Engine — TechRxiv DOI: 10.36227/techrxiv.175416873.36395198/v1
+      </a>
+    </div>
+    <div>Author: Madiha Fathima &nbsp;|&nbsp; Built with Flask + scikit-learn</div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
